@@ -30,7 +30,7 @@ bool special_contains(char str) {
             break;
         }
     }
-    
+
     return b;
 }
 
@@ -52,7 +52,7 @@ shell_node* empty_shell_node() {
     node->in_ff = NULL;
     node->out_ff = NULL;
     node->err_ff = NULL;
-    
+
     return node;
 }
 
@@ -82,11 +82,11 @@ int vxsh_parse_str(shell_node* head, char* str) {
     int pos = 0;
     int prev_pos = 0;
     shell_node* current = head;
-    
+
     // flags
     int fileno = NONE_FILENO;
     short flags = FLAG_NONE;
-    
+
     while ((c = str[pos]) != '\0') {
         if (special_contains(c)) {
             int len = (pos - prev_pos);
@@ -106,7 +106,7 @@ int vxsh_parse_str(shell_node* head, char* str) {
                 }
                 flags |= FLAG_FNAM;
             }
-            
+
             if (flags & FLAG_PIPE) {
                 // create new node and change reference
                 shell_node* next = empty_shell_node();
@@ -141,7 +141,7 @@ int vxsh_parse_str(shell_node* head, char* str) {
         }
         pos += 1;
     }
-    
+
     return 0;
 }
 
@@ -161,7 +161,7 @@ int setup_fds(shell_node* node) {
     int fd;
     static int null_fd = -1;
     char* filename;
-    
+
     if (node->in_ff != NULL) {
         filename = node->in_ff->filename;
         fd = open(filename, O_RDWR, 0666);
@@ -174,7 +174,7 @@ int setup_fds(shell_node* node) {
     } else {
         node->in_ff = fd_fn_create(STDIN_FILENO, NULL);
     }
-    
+
     if (node->out_ff != NULL) {
         filename = node->out_ff->filename;
         fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -188,7 +188,7 @@ int setup_fds(shell_node* node) {
         if (null_fd == -1) {
              null_fd = open("/dev/null", O_WRONLY);
         }
-        
+
         if (null_fd < 0) {
             perror("dev/null output file");
             return 4;
@@ -198,7 +198,7 @@ int setup_fds(shell_node* node) {
     } else {
         node->out_ff = fd_fn_create(STDOUT_FILENO, NULL);
     }
-    
+
     if (node->err_ff != NULL) {
         filename = node->err_ff->filename;
         fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -212,7 +212,7 @@ int setup_fds(shell_node* node) {
         if (null_fd == -1) {
             null_fd = open("/dev/null", O_WRONLY);
         }
-        
+
         if (null_fd < 0) {
             perror("dev/null error output file");
             return 4;
@@ -222,7 +222,7 @@ int setup_fds(shell_node* node) {
     } else {
         node->err_ff = fd_fn_create(STDERR_FILENO, NULL);
     }
-    
+
     return 0;
 }
 
@@ -231,16 +231,16 @@ void vxsh_exec_single(char** cmds, int cmdc) {
         exit(1);
         return;
     }
-    
+
     char* name = cmds[0];
     char** args = calloc(cmdc + 1, sizeof(char*));
     memcpy(args, cmds, cmdc * sizeof(char**));
-    
+
     if (strcmp(name, "exit") == 0) {
         kill(getppid(), SIGUSR1);
         exit(2);
     }
-    
+
     execvp(name, args);
     perror("execvp: ");
     exit(3);
@@ -256,14 +256,14 @@ void vxsh_exec_nodes(shell_node* head, shell_node* parent, int* parent_fd) {
         cd(head->cmds, head->cmdc);
         return;
     }
-    
+
     int w;
     int fd[2];
     if (pipe(fd) < 0) {
         perror("lsh: pipe");
         return;
     }
-    
+
     task_pid = fork();
     if (task_pid < 0) {
         fprintf(stderr, "fork Failed" );
@@ -272,23 +272,22 @@ void vxsh_exec_nodes(shell_node* head, shell_node* parent, int* parent_fd) {
         // child
         setup_fds(head);
         close(fd[0]);
-        fflush(stdout);
-        
+
         if (parent != NULL && parent_fd != NULL) {
             close(parent_fd[1]);
             head->in_ff->fd = parent_fd[0];
         }
-        
+
         if (head->next != NULL) {
             head->out_ff->fd = fd[1];
         } else {
             close(fd[1]);
         }
-        
+
         dup2(head->in_ff->fd, STDIN_FILENO);
         dup2(head->out_ff->fd, STDOUT_FILENO);
         dup2(head->err_ff->fd, STDERR_FILENO);
-        
+
         vxsh_exec_single(head->cmds, head->cmdc);
         fprintf(stderr, "Error while processing commands.");
         exit(4);
