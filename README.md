@@ -1,7 +1,7 @@
 # VXSH - VXShell
 
 Implementation of simple shell made for Operating Systems course. Written in pure C.
-It demonstrates basics of how a shells work and inter-process communication, like: parsing, fork, exec, pipe, dup2 or wait.
+It demonstrates basics of how shells work and inter-process communication, like: parsing, fork, exec, pipe, dup2 or wait.
 
 ## Functionality
 * build in commands (cd, exit)
